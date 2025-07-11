@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Book Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-6">
+
+  <div class="max-w-3xl mx-auto bg-white p-6 rounded-lg shadow-lg">
+    <h1 class="text-3xl font-bold text-center text-blue-600 mb-4">📘 Book Manager</h1>
+
+    <!-- Search -->
+    <div class="mb-4">
+      <input id="searchInput" placeholder="Search by title..." class="w-full p-2 border rounded" oninput="searchBooks()" />
+    </div>
+
+    <!-- Book List -->
+    <div id="book-list" class="space-y-4"></div>
+
+    <!-- Add Book Form -->
+    <div class="mt-6">
+      <h2 class="text-xl font-semibold text-gray-700 mb-2">Add New Book</h2>
+      <input id="title" placeholder="Title" class="p-2 border rounded w-full mb-2">
+      <input id="author" placeholder="Author" class="p-2 border rounded w-full mb-2">
+      <button onclick="addBook()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">Add Book</button>
+    </div>
+  </div>
+
+  <script>
+    const API = '/books';
+
+    async function fetchBooks() {
+      const res = await fetch(API);
+      const data = await res.json();
+      renderBooks(data.books);
+    }
+
+    function renderBooks(books) {
+      const list = document.getElementById('book-list');
+      list.innerHTML = '';
+      books.forEach(book => {
+        list.innerHTML += `
+          <div class="p-4 border rounded bg-gray-50 shadow-sm">
+            <p class="text-lg font-medium">${book.title}</p>
+            <p class="text-sm text-gray-600">by ${book.author}</p>
+            <div class="mt-2 space-x-2">
+              <button onclick="editBook(${book.id})" class="bg-yellow-400 text-white px-3 py-1 rounded">Edit</button>
+              <button onclick="deleteBook(${book.id})" class="bg-red-500 text-white px-3 py-1 rounded">Delete</button>
+            </div>
+          </div>`;
+      });
+    }
+
+    async function addBook() {
+      const title = document.getElementById('title').value;
+      const author = document.getElementById('author').value;
+
+      const res = await fetch(API, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ title, author })
+      });
+
+      if (res.status === 201) {
+        document.getElementById('title').value = '';
+        document.getElementById('author').value = '';
+        fetchBooks();
+      }
+    }
+
+    async function deleteBook(id) {
+      await fetch(`${API}/${id}`, { method: 'DELETE' });
+      fetchBooks();
+    }
+
+    async function editBook(id) {
+      const newTitle = prompt("New Title:");
+      const newAuthor = prompt("New Author:");
+      if (newTitle && newAuthor) {
+        await fetch(`${API}/${id}`, {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ title: newTitle, author: newAuthor })
+        });
+        fetchBooks();
+      }
+    }
+
+    async function searchBooks() {
+      const title = document.getElementById('searchInput').value;
+      if (!title) return fetchBooks();
+
+      const res = await fetch(`${API}/search?title=${title}`);
+      if (res.status === 200) {
+        const data = await res.json();
+        renderBooks(data.results);
+      } else {
+        document.getElementById('book-list').innerHTML = `<p class="text-red-500">No books found</p>`;
+      }
+    }
+
+    fetchBooks();
+  </script>
+</body>
+</html>
